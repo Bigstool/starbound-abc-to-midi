@@ -84,6 +84,59 @@ def parse_abc_chord(chord):
     return notes
 
 
+def get_midi_pitch(metadata: Metadata, accidental: None | str, pitch: str, octave: str) -> int:
+    """
+    Convert an ABC pitch to a MIDI pitch number.
+
+    :param metadata: A Metadata object containing the key signature and accidentals
+    :param accidental: A string representing the accidental of the note
+    :param pitch: A string representing the pitch of the note
+    :param octave: A string representing the octave of the note
+    :return: An integer representing the MIDI pitch number of the note
+    """
+    # Define the pitch classes as MIDI note numbers
+    pitch_classes = {
+        'C': 60, 'D': 62, 'E': 64, 'F': 65, 'G': 67, 'A': 69, 'B': 71,
+        'c': 72, 'd': 74, 'e': 76, 'f': 77, 'g': 79, 'a': 81, 'b': 83
+    }
+    # Define one octave and octave shift direction
+    one_octave = 12
+    octave_direction = 0  # 0 if none
+    if len(octave) > 0:
+        octave_direction = 1 if octave[0] == "'" else -1  # 1 if ', -1 if ,
+    # Check accidental -> pitch to MIDI note number -> either apply accidentals or key signature
+    # If accidental is not None, update the accidentals dictionary in the metadata
+    if accidental is not None:
+        if accidental == '=':
+            metadata.accidentals[f'{pitch}{octave}'] = 0
+        else:
+            accidental_direction = 1 if accidental.startswith('^') else -1  # 1 if ^, -1 if _
+            metadata.accidentals[f'{pitch}{octave}'] = accidental_direction * len(accidental)
+    # Convert the pitch to a MIDI note number
+    midi_pitch = pitch_classes[pitch] + octave_direction * one_octave * len(octave)
+    # Either apply the accidental or the key signature
+    if f'{pitch}{octave}' in metadata.accidentals:
+        midi_pitch += metadata.accidentals[f'{pitch}{octave}']
+    else:
+        if metadata.key >= 1 and pitch == 'F' or \
+                metadata.key >= 2 and pitch == 'C' or \
+                metadata.key >= 3 and pitch == 'G' or \
+                metadata.key >= 4 and pitch == 'D' or \
+                metadata.key >= 5 and pitch == 'A' or \
+                metadata.key >= 6 and pitch == 'E' or \
+                metadata.key >= 7 and pitch == 'B':
+            midi_pitch += 1
+        if metadata.key <= -1 and pitch == 'B' or \
+                metadata.key <= -2 and pitch == 'E' or \
+                metadata.key <= -3 and pitch == 'A' or \
+                metadata.key <= -4 and pitch == 'D' or \
+                metadata.key <= -5 and pitch == 'G' or \
+                metadata.key <= -6 and pitch == 'C' or \
+                metadata.key <= -7 and pitch == 'F':
+            midi_pitch -= 1
+    return midi_pitch
+
+
 def converter(abc: str) -> list[list]:
     playhead = 0  # Start time of the current note in seconds
 
