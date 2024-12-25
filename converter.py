@@ -40,14 +40,15 @@ def parse_abc_note(note):
 
     # Normalize the value component
     value = components['value']
-    if value is not None:
-        if '/' in value:
-            if value == '/':
-                components['value'] = '1/2'
-            elif value.startswith('/'):
-                components['value'] = f"1{value}"
-            elif value.endswith('/'):
-                components['value'] = f"{value}2"
+    if value is None:
+        components['value'] = '1'  # Default to a whole note if value is None
+    elif '/' in value:
+        if value == '/':
+            components['value'] = '1/2'
+        elif value.startswith('/'):
+            components['value'] = f"1{value}"
+        elif value.endswith('/'):
+            components['value'] = f"{value}2"
 
     return components
 
