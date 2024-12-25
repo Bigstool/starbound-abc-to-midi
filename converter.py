@@ -17,6 +17,12 @@ class Metadata:
 
 
 def parse_abc_note(note):
+    """
+    Parse an ABC note into its components: pitch, accidental, octave, and value.
+
+    :param note: A string representing an ABC note
+    :return: A dictionary containing the components of the note
+    """
     # Define the regex for parsing the note
     note_regex = re.compile(
         r"""
@@ -24,7 +30,7 @@ def parse_abc_note(note):
         (?P<accidental>\^+|=|_+)?        # Accidental: ^^, ^, =, _, __ or none
         (?P<pitch>[A-Za-gz])             # Pitch: A to G (case-sensitive)
         (?P<octave>[,']*)                # Octave markers: zero or more , or '
-        (?P<value>\d*/\d*|\d+)?           # Value: integer, fraction, or none
+        (?P<value>\d*/\d*|\d+)?          # Value: integer, fraction, or none
         $                                # End of string
         """,
         re.VERBOSE
@@ -52,14 +58,21 @@ def parse_abc_note(note):
 
     return components
 
+
 def parse_abc_chord(chord):
+    """
+    Parse an ABC chord into a list of individual notes.
+
+    :param chord: A string representing an ABC chord
+    :return: A list of strings, each representing an ABC note
+    """
     # Split the chord into individual notes using a refined regex
     note_regex = re.compile(
         r"""
         (\^+|=|_+)?                  # Accidental: ^^, ^, =, _, __ or none
         [A-Ga-gz]                    # Pitch: A to G, z (case-sensitive, z for rest)
         [,']*                        # Octave markers: zero or more , or '
-        (\d*/\d*|\d+)?                  # Value: integer, fraction, or none
+        (\d*/\d*|\d+)?               # Value: integer, fraction, or none
         """,
         re.VERBOSE
     )
