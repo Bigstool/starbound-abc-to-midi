@@ -21,10 +21,10 @@ def parse_abc_note(note):
     note_regex = re.compile(
         r"""
         ^
-        (?P<accidental>\^\^|\^|=|_|__)?  # Accidental: ^^, ^, =, _, __ or none
-        (?P<pitch>[A-Za-z])               # Pitch: A to G (case-sensitive)
+        (?P<accidental>\^+|=|_+)?        # Accidental: ^^, ^, =, _, __ or none
+        (?P<pitch>[A-Za-gz])             # Pitch: A to G (case-sensitive)
         (?P<octave>[,']*)                # Octave markers: zero or more , or '
-        (?P<value>\d+|/\d*|\d+/\d+)?  # Value: integer, fraction, or none
+        (?P<value>\d*/\d*|\d+)?           # Value: integer, fraction, or none
         $                                # End of string
         """,
         re.VERBOSE
@@ -59,7 +59,7 @@ def converter(abc: str) -> list[list]:
 
 def test():
     # Example usage
-    notes = ["^^B,,/4", "c", "_E'3", "G/", "=F,,2", "B"]
+    notes = ['z/16', '_D/4', 'f', 'B,/4', 'd/4', 'A,,3/', '^C', '^^B,,/4', "c", "_E'3", "G/", "=F,,2", "B"]
     for note in notes:
         try:
             print(f"{note} -> {parse_abc_note(note)}")
