@@ -22,7 +22,7 @@ def parse_abc_note(note):
         r"""
         ^
         (?P<accidental>\^\^|\^|=|_|__)?  # Accidental: ^^, ^, =, _, __ or none
-        (?P<pitch>[A-Ga-g])               # Pitch: A to G (case-sensitive)
+        (?P<pitch>[A-Za-z])               # Pitch: A to G (case-sensitive)
         (?P<octave>[,']*)                # Octave markers: zero or more , or '
         (?P<value>\d+|/\d*|\d+/\d+)?  # Value: integer, fraction, or none
         $                                # End of string
