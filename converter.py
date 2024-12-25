@@ -137,8 +137,20 @@ def get_midi_pitch(metadata: Metadata, accidental: None | str, pitch: str, octav
     return midi_pitch
 
 
-def converter(abc: str) -> list[list]:
+def process_meta_key(metadata: Metadata, key: str):
+    # Lookup table for converting key signatures to number of sharps or flats
+    key_accidentals = {
+        'Cb': -7, 'Gb': -6, 'Db': -5, 'Ab': -4, 'Eb': -3, 'Bb': -2, 'F': -1,
+        'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 'B': 5, 'F#': 6, 'C#': 7
+    }
+
+
+def abc_to_piano_roll(abc: str) -> list[list]:
     playhead = 0  # Start time of the current note in seconds
+
+
+def piano_roll_to_midi(piano_roll: list[list]) -> pretty_midi.PrettyMIDI:
+    pass
 
 
 def test():
