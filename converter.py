@@ -52,6 +52,24 @@ def parse_abc_note(note):
 
     return components
 
+def parse_abc_chord(chord):
+    # Split the chord into individual notes using a refined regex
+    note_regex = re.compile(
+        r"""
+        (\^+|=|_+)?                  # Accidental: ^^, ^, =, _, __ or none
+        [A-Ga-gz]                    # Pitch: A to G, z (case-sensitive, z for rest)
+        [,']*                        # Octave markers: zero or more , or '
+        (\d*/\d*|\d+)?                  # Value: integer, fraction, or none
+        """,
+        re.VERBOSE
+    )
+
+    # Find all matches for individual notes in the chord
+    notes = [match.group() for match in note_regex.finditer(chord)]
+    if not notes:
+        raise ValueError(f"Invalid ABC chord: {chord}")
+    return notes
+
 
 def converter(abc: str) -> list[list]:
     playhead = 0  # Start time of the current note in seconds
@@ -65,6 +83,14 @@ def test():
             print(f"{note} -> {parse_abc_note(note)}")
         except ValueError as e:
             print(e)
+
+    chord = '[z/16_D/4fB,/4d/4A,,3/^C]'
+    try:
+        print(f"{chord} -> {parse_abc_chord(chord)}")
+    except ValueError as e:
+        print(e)
+
+    # TODO: parse metadata: get rid of beginning (e.g., `X:`) and any comments (e.g., `% foo`), then strip whitespace
 
 
 if __name__ == '__main__':
