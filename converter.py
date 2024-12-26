@@ -129,21 +129,21 @@ def get_midi_pitch(metadata: Metadata, accidental: None | str, pitch: str, octav
     if f'{pitch}{octave}' in metadata.accidentals:
         midi_pitch += metadata.accidentals[f'{pitch}{octave}']
     else:
-        if metadata.key >= 1 and pitch == 'F' or \
-                metadata.key >= 2 and pitch == 'C' or \
-                metadata.key >= 3 and pitch == 'G' or \
-                metadata.key >= 4 and pitch == 'D' or \
-                metadata.key >= 5 and pitch == 'A' or \
-                metadata.key >= 6 and pitch == 'E' or \
-                metadata.key >= 7 and pitch == 'B':
+        if metadata.key >= 1 and pitch.upper() == 'F' or \
+                metadata.key >= 2 and pitch.upper() == 'C' or \
+                metadata.key >= 3 and pitch.upper() == 'G' or \
+                metadata.key >= 4 and pitch.upper() == 'D' or \
+                metadata.key >= 5 and pitch.upper() == 'A' or \
+                metadata.key >= 6 and pitch.upper() == 'E' or \
+                metadata.key >= 7 and pitch.upper() == 'B':
             midi_pitch += 1
-        if metadata.key <= -1 and pitch == 'B' or \
-                metadata.key <= -2 and pitch == 'E' or \
-                metadata.key <= -3 and pitch == 'A' or \
-                metadata.key <= -4 and pitch == 'D' or \
-                metadata.key <= -5 and pitch == 'G' or \
-                metadata.key <= -6 and pitch == 'C' or \
-                metadata.key <= -7 and pitch == 'F':
+        if metadata.key <= -1 and pitch.upper() == 'B' or \
+                metadata.key <= -2 and pitch.upper() == 'E' or \
+                metadata.key <= -3 and pitch.upper() == 'A' or \
+                metadata.key <= -4 and pitch.upper() == 'D' or \
+                metadata.key <= -5 and pitch.upper() == 'G' or \
+                metadata.key <= -6 and pitch.upper() == 'C' or \
+                metadata.key <= -7 and pitch.upper() == 'F':
             midi_pitch -= 1
     return midi_pitch
 
