@@ -14,11 +14,15 @@ class Metadata:
         self.accidentals = {}  # {note: accidental} e.g., {'C': 1, 'F,,': -1}
         self.default_note_length = Fraction('1/4')  # Default note value
 
+    def reset_accidentals(self):
+        self.accidentals = {}
 
-def parse_abc_note(note):
+
+def parse_abc_note(metadata: Metadata, note: str):
     """
     Parse an ABC note into its components: pitch, accidental, octave, and value.
 
+    :param metadata: A Metadata object
     :param note: A string representing an ABC note
     :return: A dictionary containing the components of the note
     """
@@ -54,6 +58,10 @@ def parse_abc_note(note):
             components['value'] = f"1{value}"
         elif value.endswith('/'):
             components['value'] = f"{value}2"
+    # Convert the value to a Fraction
+    components['value'] = Fraction(components['value'])
+    # Apply default note length
+    components['value'] *= metadata.default_note_length
 
     return components
 
@@ -143,6 +151,8 @@ def parse_meta_key(metadata: Metadata, line: str):
         'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 'B': 5, 'F#': 6, 'C#': 7
     }
     metadata.key = key_accidentals[line]
+    # Reset the accidentals dictionary in the metadata TODO: unsure if this should be done
+    metadata.reset_accidentals()
 
 
 def parse_tempo(metadata: Metadata, line: str):
@@ -172,9 +182,6 @@ def parse_tempo(metadata: Metadata, line: str):
 def abc_to_piano_roll(abc: list[str]) -> list[list]:
     piano_roll: list[list] = []  # [[start: float, end: float, pitch: int, velocity: int], ...]
     metadata = Metadata()
-    # TODO: start_time = seconds_elapsed + (metadata.tempo * beats_elapsed)
-    # TODO: end_time = start_time + (metadata.tempo * note_value)
-    # TODO: note_value = (note.num/note.den) * (default_note_length.num/default_note_length.den)
     seconds_elapsed = 0  # Number of seconds elapsed before the last tempo change
     beats_elapsed: Fraction = Fraction('0')  # Number of beats elapsed after the last tempo change
 
@@ -202,13 +209,52 @@ def abc_to_piano_roll(abc: list[str]) -> list[list]:
                 metadata.default_note_length = Fraction(line)
             continue  # No applicable metadata, so skip to the next line
         # Process notes
-
+        # Split the line into individual notes and chords
+        notes = line.split(' ')
+        for item in notes:
+            # Convert notes into chords of one note
+            if not item.startswith('['):
+                item = f"[{item}]"
+            # Parse the chord into individual notes
+            chord = parse_abc_chord(item)
+            # Parse the individual notes into components
+            chord = [parse_abc_note(metadata, note) for note in chord]
+            # Process each note in the chord
+            for components in chord:
+                # Skip rests
+                if components['pitch'] == 'z':
+                    continue
+                # Convert the pitch to a MIDI pitch number
+                pitch = get_midi_pitch(metadata, components['accidental'], components['pitch'], components['octave'])
+                # Calculate the start and end times of the note
+                start_time = seconds_elapsed + (metadata.tempo * beats_elapsed)
+                end_time = start_time + (metadata.tempo * components['value'])
+                # Add the note to the piano roll
+                piano_roll.append([start_time, end_time, pitch, 80])
+            # Update the number of beats elapsed
+            # If the chord ends with a rest, use the rest's value
+            if chord[-1]['pitch'] == 'z':
+                beats_elapsed += chord[-1]['value']
+            # Otherwise, use the value of the first note in the chord
+            else:
+                beats_elapsed += chord[0]['value']
 
     return piano_roll
 
 
 def piano_roll_to_midi(piano_roll: list[list]) -> pretty_midi.PrettyMIDI:
-    pass
+    mid = pretty_midi.PrettyMIDI(resolution=480, initial_tempo=120.0)
+    track = pretty_midi.Instrument(program=pretty_midi.instrument_name_to_program('Acoustic Grand Piano'))
+    for note in piano_roll:
+        start_time, end_time, pitch, velocity = note
+        track.notes.append(pretty_midi.Note(
+            velocity=velocity,
+            pitch=pitch,
+            start=start_time,
+            end=end_time
+        ))
+    mid.instruments.append(track)
+    return mid
 
 
 def test():
@@ -216,7 +262,9 @@ def test():
     notes = ['z/16', '_D/4', 'f', 'B,/4', 'd/4', 'A,,3/', '^C', '^^B,,/4', "c", "_E'3", "G/", "=F,,2", "B"]
     for note in notes:
         try:
-            print(f"{note} -> {parse_abc_note(note)}")
+            metadata = Metadata()
+            metadata.default_note_length = Fraction('1')
+            print(f"{note} -> {parse_abc_note(metadata, note)}")
         except ValueError as e:
             print(e)
     # Test parse_abc_chord
@@ -235,12 +283,12 @@ def test():
             print(f"{tempo} -> {metadata.tempo}")
         except ValueError as e:
             print(e)
-
-    # # Test read file
-    # with open('On The Beach - Piano.abc', 'r') as file:
-    #     abc = [line.strip() for line in file]
-    # abc_to_piano_roll(abc)
-
+    # Test abc_to_piano_roll
+    with open('On The Beach - Piano.abc', 'r') as file:
+        abc = [line.strip() for line in file]
+    piano_roll = abc_to_piano_roll(abc)
+    mid = piano_roll_to_midi(piano_roll)
+    mid.write('On The Beach - Piano.mid')
 
 
 if __name__ == '__main__':
