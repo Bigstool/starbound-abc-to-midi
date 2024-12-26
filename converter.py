@@ -256,13 +256,8 @@ def abc_to_piano_roll(abc: list[str]) -> list[list]:
                 end_time = start_time + (metadata.tempo * components['value'])
                 # Add the note to the piano roll
                 piano_roll.append([start_time, end_time, pitch, 80])
-            # Update the number of beats elapsed
-            # If the chord ends with a rest, use the rest's value
-            if chord[-1]['pitch'] == 'z':
-                beats_elapsed += chord[-1]['value']
-            # Otherwise, use the value of the first note in the chord
-            else:
-                beats_elapsed += chord[0]['value']
+            # Update the number of beats elapsed with the smallest note value in the chord
+            beats_elapsed += min([note['value'] for note in chord])
 
     return piano_roll
 
