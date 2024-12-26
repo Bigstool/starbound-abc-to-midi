@@ -7,8 +7,6 @@ from fractions import Fraction
 
 class Metadata:
     def __init__(self):
-        # TODO: note value is (note.num/note.den) * (default_note_length.num/default_note_length.den)
-        # TODO: hence note duration is self.tempo * note_value
         self.tempo = 2  # Seconds per whole note
         # self.time_signature = Fraction('4/4')
         self.key = 0  # -7 to 7
@@ -16,6 +14,11 @@ class Metadata:
         self.default_note_length = Fraction('1/4')  # Default note value
 
     def reset_accidentals(self):
+        """
+        Reset the accidentals dictionary in the metadata.
+
+        :return: None
+        """
         self.accidentals = {}
 
 
@@ -94,7 +97,7 @@ def parse_abc_chord(chord):
 
 def get_midi_pitch(metadata: Metadata, accidental: None | str, pitch: str, octave: str) -> int:
     """
-    Convert an ABC pitch to a MIDI pitch number.
+    Convert an ABC pitch to a MIDI pitch number. Does not modify the metadata object.
 
     :param metadata: A Metadata object containing the key signature and accidentals
     :param accidental: A string representing the accidental of the note
@@ -146,6 +149,13 @@ def get_midi_pitch(metadata: Metadata, accidental: None | str, pitch: str, octav
 
 
 def parse_meta_key(metadata: Metadata, line: str):
+    """
+    Parse an ABC key signature into a number of sharps or flats. Modifies the metadata object in place.
+
+    :param metadata: A Metadata object
+    :param line: A string representing an ABC key signature (e.g., 'C', 'F#', 'Bb', 'Eb')
+    :return: None
+    """
     # Lookup table for converting key signatures to number of sharps or flats
     key_accidentals = {
         'Cb': -7, 'Gb': -6, 'Db': -5, 'Ab': -4, 'Eb': -3, 'Bb': -2, 'F': -1,
@@ -157,6 +167,13 @@ def parse_meta_key(metadata: Metadata, line: str):
 
 
 def parse_tempo(metadata: Metadata, line: str):
+    """
+    Parse an ABC tempo into a tempo in seconds per whole note. Modifies the metadata object in place.
+
+    :param metadata: A Metadata object
+    :param line: A string representing an ABC tempo (e.g., '1=120', '1/4=120', '1/8=120', '1/16=120', '120', '60')
+    :return: None
+    """
     tempo_regex = re.compile(
         r"""
         ^
@@ -181,6 +198,13 @@ def parse_tempo(metadata: Metadata, line: str):
 
 
 def abc_to_piano_roll(abc: list[str]) -> list[list]:
+    """
+    Convert an ABC song to a piano roll.
+
+    :param abc: A list of strings representing an ABC song.
+                Each string must be stripped of leading and trailing whitespace.
+    :return: A list of lists in the form of [[start: float, end: float, pitch: int, velocity: int], ...]
+    """
     piano_roll: list[list] = []  # [[start: float, end: float, pitch: int, velocity: int], ...]
     metadata = Metadata()
     seconds_elapsed = 0  # Number of seconds elapsed before the last tempo change
@@ -244,6 +268,12 @@ def abc_to_piano_roll(abc: list[str]) -> list[list]:
 
 
 def piano_roll_to_midi(piano_roll: list[list]) -> pretty_midi.PrettyMIDI:
+    """
+    Convert a piano roll to a MIDI file.
+
+    :param piano_roll: A list of lists in the form of [[start: float, end: float, pitch: int, velocity: int], ...]
+    :return: A PrettyMIDI object
+    """
     mid = pretty_midi.PrettyMIDI(resolution=480, initial_tempo=120.0)
     track = pretty_midi.Instrument(program=pretty_midi.instrument_name_to_program('Acoustic Grand Piano'))
     for note in piano_roll:
