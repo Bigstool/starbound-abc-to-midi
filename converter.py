@@ -1,19 +1,18 @@
 import re
 import pretty_midi
 
+from fractions import Fraction
+
 
 class Metadata:
     def __init__(self):
-        # TODO: note value is (numerator, denominator)
-        # TODO: hence note duration is self.tempo * (numerator / denominator)
+        # TODO: note value is (note.num/note.den) * (default_note_length.num/default_note_length.den)
+        # TODO: hence note duration is self.tempo * note_value
         self.tempo = 2  # Seconds per whole note
-        # self.time_signature = (4, 4)
-        # TODO: if self.key >= 1 and note.letter_name == 'F': note.accidental = 1
+        # self.time_signature = Fraction('4/4')
         self.key = 0  # -7 to 7
-        # TODO: first if note has accidental, add or update self.accidentals
-        # TODO: then convert abc pitch to midi note number,
-        # TODO: then if pitch in accidentals: ... else: (apply key signature)
         self.accidentals = {}  # {note: accidental} e.g., {'C': 1, 'F,,': -1}
+        self.default_note_length = Fraction('1/4')  # Default note value
 
 
 def parse_abc_note(note):
@@ -137,16 +136,75 @@ def get_midi_pitch(metadata: Metadata, accidental: None | str, pitch: str, octav
     return midi_pitch
 
 
-def process_meta_key(metadata: Metadata, key: str):
+def parse_meta_key(metadata: Metadata, line: str):
     # Lookup table for converting key signatures to number of sharps or flats
     key_accidentals = {
         'Cb': -7, 'Gb': -6, 'Db': -5, 'Ab': -4, 'Eb': -3, 'Bb': -2, 'F': -1,
         'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 'B': 5, 'F#': 6, 'C#': 7
     }
+    metadata.key = key_accidentals[line]
 
 
-def abc_to_piano_roll(abc: str) -> list[list]:
-    playhead = 0  # Start time of the current note in seconds
+def parse_tempo(metadata: Metadata, line: str):
+    tempo_regex = re.compile(
+        r"""
+        ^
+        ((?P<unit>\d+/\d+|\d+)=)?        # Accidental: ^^, ^, =, _, __ or none
+        (?P<bpm>\d+)                     # Pitch: A to G (case-sensitive)
+        $                                # End of string
+        """,
+        re.VERBOSE
+    )
+    # Match the note against the regex
+    match = tempo_regex.match(line)
+    if not match:
+        raise ValueError(f"Invalid ABC tempo: {line}")
+
+    # Extract the components using named groups
+    components = match.groupdict()
+    if components['unit'] is None:  # Default to 1/4 if unit is None
+        components['unit'] = '1/4'
+
+    # Convert to seconds per whole note
+    metadata.tempo = 60 / int(components['bpm']) / Fraction(components['unit'])
+
+
+def abc_to_piano_roll(abc: list[str]) -> list[list]:
+    piano_roll: list[list] = []  # [[start: float, end: float, pitch: int, velocity: int], ...]
+    metadata = Metadata()
+    # TODO: start_time = seconds_elapsed + (metadata.tempo * beats_elapsed)
+    # TODO: end_time = start_time + (metadata.tempo * note_value)
+    # TODO: note_value = (note.num/note.den) * (default_note_length.num/default_note_length.den)
+    seconds_elapsed = 0  # Number of seconds elapsed before the last tempo change
+    beats_elapsed: Fraction = Fraction('0')  # Number of beats elapsed after the last tempo change
+
+    for line in abc:
+        # Skip empty lines
+        if not line:
+            continue
+        # Process metadata
+        if re.match(r'^[A-Z]:', line):  # Metadata line starts with a capital letter followed by a colon
+            # Get metadata type
+            metadata_type = line[0]
+            # Get rid of beginning (e.g., `X:`) and any comments (e.g., `% foo`), then strip whitespace
+            line = re.sub(r'^[A-Z]:|%.+$', '', line).strip()
+            # Process metadata
+            if metadata_type == 'K':  # Key signature
+                parse_meta_key(metadata, line)
+            if metadata_type == 'Q':  # Tempo
+                # Save bets_elapsed into seconds_elapsed
+                seconds_elapsed += metadata.tempo * beats_elapsed
+                # Reset beats_elapsed
+                beats_elapsed = Fraction('0')
+                # Update tempo
+                parse_tempo(metadata, line)
+            if metadata_type == 'L':  # Default note length
+                metadata.default_note_length = Fraction(line)
+            continue  # No applicable metadata, so skip to the next line
+        # Process notes
+
+
+    return piano_roll
 
 
 def piano_roll_to_midi(piano_roll: list[list]) -> pretty_midi.PrettyMIDI:
@@ -154,21 +212,35 @@ def piano_roll_to_midi(piano_roll: list[list]) -> pretty_midi.PrettyMIDI:
 
 
 def test():
-    # Example usage
+    # Test parse_abc_note
     notes = ['z/16', '_D/4', 'f', 'B,/4', 'd/4', 'A,,3/', '^C', '^^B,,/4', "c", "_E'3", "G/", "=F,,2", "B"]
     for note in notes:
         try:
             print(f"{note} -> {parse_abc_note(note)}")
         except ValueError as e:
             print(e)
-
-    chord = '[z/16_D/4fB,/4d/4A,,3/^C]'
+    # Test parse_abc_chord
+    # chord = '[z/16_D/4fB,/4d/4A,,3/^C]'
+    chord = '[z/16_D/4fB,/4d/4A,,3/^C^^B,,/4c_E\'3G/=F,,2B]'
     try:
         print(f"{chord} -> {parse_abc_chord(chord)}")
     except ValueError as e:
         print(e)
+    # Test parse_tempo
+    tempos = ['1=120', '1/4=120', '1/8=120', '1/16=120', '120', '60']
+    for tempo in tempos:
+        try:
+            metadata = Metadata()
+            parse_tempo(metadata, tempo)
+            print(f"{tempo} -> {metadata.tempo}")
+        except ValueError as e:
+            print(e)
 
-    # TODO: parse metadata: get rid of beginning (e.g., `X:`) and any comments (e.g., `% foo`), then strip whitespace
+    # # Test read file
+    # with open('On The Beach - Piano.abc', 'r') as file:
+    #     abc = [line.strip() for line in file]
+    # abc_to_piano_roll(abc)
+
 
 
 if __name__ == '__main__':
