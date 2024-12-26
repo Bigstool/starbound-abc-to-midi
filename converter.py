@@ -303,12 +303,15 @@ def convert_songs(songs_dir: str, output_dir: str):
         # Load the song from the file
         with open(os.path.join(songs_dir, song_file), 'r') as file:
             abc = [line.strip() for line in file]
-        # Convert the song to a piano roll
-        piano_roll = abc_to_piano_roll(abc)
-        # Convert the piano roll to a MIDI file
-        mid = piano_roll_to_midi(piano_roll)
-        # Save the MIDI file
-        mid.write(os.path.join(output_dir, f"{os.path.splitext(song_file)[0]}.mid"))
+        try:
+            # Convert the song to a piano roll
+            piano_roll = abc_to_piano_roll(abc)
+            # Convert the piano roll to a MIDI file
+            mid = piano_roll_to_midi(piano_roll)
+            # Save the MIDI file
+            mid.write(os.path.join(output_dir, f"{os.path.splitext(song_file)[0]}.mid"))
+        except (ValueError, Exception) as e:
+            print(f"Error processing {song_file}: {e}")
 
 
 def test():
