@@ -1,4 +1,5 @@
 import re
+import os
 import pretty_midi
 
 from fractions import Fraction
@@ -257,6 +258,33 @@ def piano_roll_to_midi(piano_roll: list[list]) -> pretty_midi.PrettyMIDI:
     return mid
 
 
+def convert_songs(songs_dir: str, output_dir: str):
+    """
+    Convert a directory of ABC songs to MIDI files.
+
+    :param songs_dir: The directory containing the ABC songs
+    :param output_dir: The directory to save the MIDI files
+    :return: None
+    """
+    # Create the output directory if it does not exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    # Process each song in the songs directory
+    for song_file in os.listdir(songs_dir):
+        # Skip non-ABC files
+        if not song_file.endswith('.abc'):
+            continue
+        # Load the song from the file
+        with open(os.path.join(songs_dir, song_file), 'r') as file:
+            abc = [line.strip() for line in file]
+        # Convert the song to a piano roll
+        piano_roll = abc_to_piano_roll(abc)
+        # Convert the piano roll to a MIDI file
+        mid = piano_roll_to_midi(piano_roll)
+        # Save the MIDI file
+        mid.write(os.path.join(output_dir, f"{os.path.splitext(song_file)[0]}.mid"))
+
+
 def test():
     # Test parse_abc_note
     notes = ['z/16', '_D/4', 'f', 'B,/4', 'd/4', 'A,,3/', '^C', '^^B,,/4', "c", "_E'3", "G/", "=F,,2", "B"]
@@ -292,4 +320,5 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    # test()
+    convert_songs(songs_dir='./res/songs', output_dir='./res/songs_midi')
