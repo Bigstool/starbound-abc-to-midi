@@ -1,5 +1,6 @@
 import re
 import os
+import argparse
 import pretty_midi
 
 from fractions import Fraction
@@ -367,13 +368,52 @@ def test():
         except ValueError as e:
             print(e)
     # Test abc_to_piano_roll
-    with open('On The Beach - Piano.abc', 'r') as file:
+    with open('res/songs/On The Beach - Piano.abc', 'r') as file:
         abc = [line.strip() for line in file]
     piano_roll = abc_to_piano_roll(abc)
     mid = piano_roll_to_midi(piano_roll)
-    mid.write('On The Beach - Piano.mid')
+    mid.write('res/On The Beach - Piano.mid')
+
+
+def main():
+    # Command-line arguments for --convert-songs and --convert-and-combine
+    parser = argparse.ArgumentParser(description="Convert ABC songs to MIDI files")
+    subparsers = parser.add_subparsers(dest='command', required=True)
+    # For --convert-songs, specify the songs directory --songs-dir and the output directory --output-dir
+    convert_songs_parser = subparsers.add_parser(
+        'convert-songs',
+        description="Bulk convert a directory of ABC songs to MIDI files"
+    )
+    convert_songs_parser.add_argument('--songs-dir', type=str, required=True,
+                                      help="The directory containing the ABC songs")
+    convert_songs_parser.add_argument('--output-dir', type=str, required=True,
+                                      help="The directory to save the MIDI files")
+    # For --convert-and-combine,
+    # specify the song paths --song-paths (accepts multiple paths) and the output path --output-path
+    convert_and_combine_parser = subparsers.add_parser(
+        'convert-and-combine',
+        description="Convert and combine one or more ABC song(s) into a single MIDI file as separate tracks"
+    )
+    convert_and_combine_parser.add_argument('--song-paths', type=str, nargs='+', required=True,
+                                            help="The paths to one or more ABC song(s)")
+    convert_and_combine_parser.add_argument('--output-path', type=str, required=True,
+                                            help="The path to save the combined MIDI file")
+    args = parser.parse_args()
+    # Convert songs
+    if args.command == 'convert-songs':
+        convert_songs(songs_dir=args.songs_dir, output_dir=args.output_dir)
+    # Convert and combine songs
+    if args.command == 'convert-and-combine':
+        convert_and_combine_songs(song_paths=args.song_paths, output_path=args.output_path)
 
 
 if __name__ == '__main__':
     # test()
-    convert_songs(songs_dir='./res/songs', output_dir='./res/songs_midi')
+    # convert_songs(songs_dir='./res/songs', output_dir='./res/songs_midi')
+    # song_paths = [
+    #     'res/songs/On The Beach - Piano.abc',
+    #     'res/songs/On The Beach - Violin.abc',
+    #     'res/songs/On The Beach - Oboe.abc'
+    # ]
+    # convert_and_combine_songs(song_paths=song_paths, output_path='res/On The Beach.mid')
+    main()
