@@ -202,7 +202,6 @@ def abc_to_piano_roll(abc: list[str]) -> list[list]:
     Convert an ABC song to a piano roll.
 
     :param abc: A list of strings representing an ABC song.
-                Each string must be stripped of leading and trailing whitespace.
     :return: A list of lists in the form of [[start: float, end: float, pitch: int, velocity: int], ...]
     """
     piano_roll: list[list] = []  # [[start: float, end: float, pitch: int, velocity: int], ...]
@@ -211,6 +210,8 @@ def abc_to_piano_roll(abc: list[str]) -> list[list]:
     beats_elapsed: Fraction = Fraction('0')  # Number of beats elapsed after the last tempo change
 
     for line in abc:
+        # Get rid of tailing comments (e.g., `% foo`), then strip whitespace
+        line = re.sub(r'%.+$', '', line).strip()
         # Skip empty lines
         if not line:
             continue
@@ -218,8 +219,8 @@ def abc_to_piano_roll(abc: list[str]) -> list[list]:
         if re.match(r'^[A-Z]:', line):  # Metadata line starts with a capital letter followed by a colon
             # Get metadata type
             metadata_type = line[0]
-            # Get rid of beginning (e.g., `X:`) and any comments (e.g., `% foo`), then strip whitespace
-            line = re.sub(r'^[A-Z]:|%.+$', '', line).strip()
+            # Get rid of beginning metadata type (e.g., `X:`), then strip whitespace
+            line = re.sub(r'^[A-Z]:', '', line).strip()
             # Process metadata
             if metadata_type == 'K':  # Key signature
                 parse_meta_key(metadata, line)
