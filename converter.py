@@ -263,24 +263,26 @@ def abc_to_piano_roll(abc: list[str]) -> list[list]:
     return piano_roll
 
 
-def piano_roll_to_midi(piano_roll: list[list]) -> pretty_midi.PrettyMIDI:
+def piano_roll_to_midi(piano_rolls: list[list[list]]) -> pretty_midi.PrettyMIDI:
     """
-    Convert a piano roll to a MIDI file.
+    Convert a list of piano rolls to a MIDI file. Each piano roll will be converted to a separate track.
 
-    :param piano_roll: A list of lists in the form of [[start: float, end: float, pitch: int, velocity: int], ...]
+    :param piano_rolls: A list of piano rolls
+                        Each piano roll is in the form of [[start: float, end: float, pitch: int, velocity: int], ...]
     :return: A PrettyMIDI object
     """
     mid = pretty_midi.PrettyMIDI(resolution=480, initial_tempo=120.0)
-    track = pretty_midi.Instrument(program=pretty_midi.instrument_name_to_program('Acoustic Grand Piano'))
-    for note in piano_roll:
-        start_time, end_time, pitch, velocity = note
-        track.notes.append(pretty_midi.Note(
-            velocity=velocity,
-            pitch=pitch,
-            start=start_time,
-            end=end_time
-        ))
-    mid.instruments.append(track)
+    for piano_roll in piano_rolls:
+        track = pretty_midi.Instrument(program=pretty_midi.instrument_name_to_program('Acoustic Grand Piano'))
+        for note in piano_roll:
+            start_time, end_time, pitch, velocity = note
+            track.notes.append(pretty_midi.Note(
+                velocity=velocity,
+                pitch=pitch,
+                start=start_time,
+                end=end_time
+            ))
+        mid.instruments.append(track)
     return mid
 
 
@@ -307,11 +309,35 @@ def convert_songs(songs_dir: str, output_dir: str):
             # Convert the song to a piano roll
             piano_roll = abc_to_piano_roll(abc)
             # Convert the piano roll to a MIDI file
-            mid = piano_roll_to_midi(piano_roll)
+            mid = piano_roll_to_midi([piano_roll])
             # Save the MIDI file
             mid.write(os.path.join(output_dir, f"{os.path.splitext(song_file)[0]}.mid"))
         except (ValueError, Exception) as e:
             print(f"Error processing {song_file}: {e}")
+
+
+def convert_and_combine_songs(song_paths: list[str], output_path: str):
+    """
+    Convert a list of ABC songs to MIDI files and combine them into a single MIDI file.
+
+    :param song_paths: A list of paths to ABC songs
+    :param output_path: The path to save the combined MIDI file
+    :return: None
+    """
+    # Convert each song to a piano roll
+    piano_rolls = []
+    for song_path in song_paths:
+        with open(song_path, 'r') as file:
+            abc = [line.strip() for line in file]
+        try:
+            piano_roll = abc_to_piano_roll(abc)
+            piano_rolls.append(piano_roll)
+        except (ValueError, Exception) as e:
+            print(f"Error processing {song_path}: {e}")
+    # Convert the piano rolls to MIDI files
+    mid = piano_roll_to_midi(piano_rolls)
+    # Save the combined MIDI file
+    mid.write(output_path)
 
 
 def test():
